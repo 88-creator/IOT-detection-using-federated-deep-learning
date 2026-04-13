@@ -1,0 +1,94 @@
+Detecting Ddos Attacks Using Machine Learning, integrating real time ddos attack show output results python  code flask framework full python code backend database SQLite database user register login admin dashboard admin username admin admin password admin123 Laravel premium layout framework design all show user side, 
+
+admin Dashboard all Modules Report, user details, analytics Report on Graph, System Report on Graph and different graph visualization line graph  result show user side
+
+Report Future: 
+
+user upload csv file dataset simulation visualization results
+
+ admin dashboard System reports and classification line graph, Analysis report graph reports performance optimization. all classification line or bar graph show output 
+
+an AI-enhanced routing mechanism that dynamically selects optimal routes and cluster heads using Machine Learning, improving energy efficiency, throughput, and network lifetime.
+
+ A Flask-based simulation dashboard visually represents sensor nodes, energy levels, and routing paths in real time.
+
+real-time DDoS attack detection system that continuously monitors network traffic, extracts flow-level features, classifies traffic using machine learning models, stores results in a SQLite database, and visualizes alerts through a Flask web dashboard.
+
+Module Future
+
+1. Core Concept (Real-Time) -Unlike offline detection, this system:, Captures live network packets,Converts them into network flows, Applies a trained ML model, Detects attacks within seconds, Raises alerts & logs evidence 
+
+2. Network Traffic Capture (Real-Time) -Purpose: Capture live packets from the network interface. Key Features, Uses Scapy, Captures IP, TCP, UDP packets, Runs continuously
+
+3. Flow-Based Feature Extraction , Purpose: Convert raw packets into meaningful ML features. Extracted Features, Packet rate, Bytes per second, Flow duration, SYN flag count, Source IP entropy, Protocol type
+
+4. Machine Learning Model Training - Purpose: Train a DDoS detection model offline. Steps, Load dataset (CICDDoS2019), Clean & normalize data, Feature selection, Train model, Save model
+
+5. Recommended Models -Random Forest (best baseline), XGBoost (future scalability), Isolation Forest (unknown attacks)
+
+6. Real-Time Attack Detection Engine -Purpose: Predict live traffic behavior., Workflow, Load trained model, Feed extracted features, Predict label
+
+7. Output Labels Normal, DDoS Attack
+
+8. Alert & Mitigation Module -Purpose: Respond to detected attacks. Current Actions, Log attack, Raise dashboard alert, Future Extensions, Auto IP blocking, Firewall rule generation 
+Rate limiting
+
+9. Real-Time Visualization Dashboard, Proposed: Visual monitoring of network health. Visuals, Line graph: packet rate vs time, Bar chart: attack frequency, Pie chart: traffic distribution
+
+
+Evaluation Metrics- Accuracy, Precision, Recall, F1-Score, Detection latency
+
+he AI-enhanced routing protocol significantly improves WSN performance by intelligently selecting cluster heads and routing paths based on energy and topology. 
+
+The Flask-based simulation provides a powerful visual platform to analyze real-time network behavior, 
+
+User dashboard show after  line Graph  Analysis visualization 
+
+1. Network Traffic Rate vs Time (Real-Time Line Graph)
+
+Purpose: Show abnormal traffic spikes during DDoS attacks.
+
+
+2. Normal vs DDoS Traffic Classification Distribution
+
+Purpose: Visualize how much traffic is malicious.
+
+
+3. Source IP Request Frequency Analysis
+
+Purpose: Identify attacking IPs generating excessive requests.
+
+
+4. Protocol-wise Traffic Distribution
+
+Purpose: Show attack dominance on TCP/UDP/ICMP.
+
+
+5. Feature Importance in ML Model
+
+Purpose: Show which features most influence DDoS detection.
+
+
+6. Attack Detection Accuracy Comparison
+
+Purpose: Compare ML algorithms.
+
+
+7. Confusion Matrix Visualization
+
+Purpose: Show True/False Positives & Negatives.
+
+
+8. Detection Latency vs Traffic Load
+
+Purpose: Measure real-time system performance.
+
+
+9. Attack Frequency Over Time
+
+Purpose: Analyze attack patterns.
+
+10. Database Log Growth (System Scalability)
+
+Purpose: Show how logs grow over time.
+

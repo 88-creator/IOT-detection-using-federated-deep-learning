@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% block title %}Real-Time Monitor - DDoS Detection System{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="fw-bold text-dark"><i class="fas fa-broadcast-tower me-2"></i>Real-Time Traffic Monitor</h2>
+                        <p class="text-muted">Live network traffic analysis and DDoS detection</p>
+                    </div>
+                    <div>
+                        <button id="startMonitor" class="btn btn-success btn-lg me-2">
+                            <i class="fas fa-play me-2"></i>Start Monitoring
+                        </button>
+                        <button id="stopMonitor" class="btn btn-danger btn-lg" disabled>
+                            <i class="fas fa-stop me-2"></i>Stop
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card bg-gradient-info">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-content">
+                        <h3 id="currentTime">--:--:--</h3>
+                        <p>Current Time</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card bg-gradient-primary">
+                    <div class="stat-icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <div class="stat-content">
+                        <h3 id="packetRate">0</h3>
+                        <p>Packets/Second</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card" id="statusCard">
+                    <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="stat-content">
+                        <h3 id="status">IDLE</h3>
+                        <p>Detection Status</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card bg-gradient-warning">
+                    <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+                    <div class="stat-content">
+                        <h3 id="confidence">0%</h3>
+                        <p>Confidence</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-xl-8">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-wave-square me-2"></i>Live Packet Rate</h5>
+                        <span class="badge bg-success" id="liveIndicator">
+                            <i class="fas fa-circle me-1"></i>Live
+                        </span>
+                    </div>
+                    <div class="chart-body">
+                        <div id="liveChart" style="height: 400px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4">
+                <div class="chart-card h-100">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-info-circle me-2"></i>Current Traffic Details</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div class="traffic-details">
+                            <div class="detail-item">
+                                <span class="label">Source IP:</span>
+                                <span class="value" id="sourceIP">--</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">Destination IP:</span>
+                                <span class="value" id="destIP">--</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">Protocol:</span>
+                                <span class="value" id="protocol">--</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">Bytes/Second:</span>
+                                <span class="value" id="bytesPerSec">--</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">SYN Flag Count:</span>
+                                <span class="value" id="synCount">--</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">Classification:</span>
+                                <span class="value badge" id="classification">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-list me-2"></i>Recent Alerts</h5>
+                        <span class="badge bg-danger" id="alertCount">0</span>
+                    </div>
+                    <div class="chart-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="alertsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Type</th>
+                                        <th>Severity</th>
+                                        <th>Source IP</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alertsBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let monitorInterval = null;
+let chartData = { x: [], y: [] };
+const maxDataPoints = 50;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initLiveChart();
+    loadAlerts();
+    updateTime();
+    setInterval(updateTime, 1000);
+    
+    document.getElementById('startMonitor').addEventListener('click', startMonitoring);
+    document.getElementById('stopMonitor').addEventListener('click', stopMonitoring);
+});
+
+function updateTime() {
+    document.getElementById('currentTime').textContent = new Date().toLocaleTimeString();
+}
+
+function initLiveChart() {
+    const trace = {
+        x: [],
+        y: [],
+        type: 'scatter',
+        mode: 'lines',
+        fill: 'tozeroy',
+        line: { color: '#667eea', width: 2 },
+        fillcolor: 'rgba(102, 126, 234, 0.3)'
+    };
+    
+    Plotly.newPlot('liveChart', [trace], {
+        margin: { t: 20, r: 20, l: 60, b: 50 },
+        xaxis: { title: 'Time', showgrid: true, gridcolor: '#eee' },
+        yaxis: { title: 'Packet Rate', showgrid: true, gridcolor: '#eee' },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent'
+    }, {responsive: true});
+}
+
+function startMonitoring() {
+    document.getElementById('startMonitor').disabled = true;
+    document.getElementById('stopMonitor').disabled = false;
+    document.getElementById('liveIndicator').classList.remove('bg-secondary');
+    document.getElementById('liveIndicator').classList.add('bg-success');
+    
+    monitorInterval = setInterval(fetchTrafficData, 1000);
+}
+
+function stopMonitoring() {
+    document.getElementById('startMonitor').disabled = false;
+    document.getElementById('stopMonitor').disabled = true;
+    document.getElementById('liveIndicator').classList.remove('bg-success');
+    document.getElementById('liveIndicator').classList.add('bg-secondary');
+    
+    clearInterval(monitorInterval);
+    monitorInterval = null;
+}
+
+function fetchTrafficData() {
+    fetch('/api/real-time-traffic')
+        .then(response => response.json())
+        .then(data => {
+            updateDisplay(data);
+            updateChart(data);
+            loadAlerts();
+        });
+}
+
+function updateDisplay(data) {
+    document.getElementById('packetRate').textContent = Math.round(data.packet_rate).toLocaleString();
+    document.getElementById('sourceIP').textContent = data.source_ip;
+    document.getElementById('destIP').textContent = data.destination_ip;
+    document.getElementById('protocol').textContent = data.protocol;
+    document.getElementById('bytesPerSec').textContent = Math.round(data.bytes_per_second).toLocaleString();
+    document.getElementById('synCount').textContent = data.syn_flag_count;
+    document.getElementById('confidence').textContent = (data.confidence * 100).toFixed(1) + '%';
+    
+    const classEl = document.getElementById('classification');
+    classEl.textContent = data.classification;
+    classEl.className = 'value badge ' + (data.classification === 'DDoS' ? 'bg-danger' : 'bg-success');
+    
+    const statusCard = document.getElementById('statusCard');
+    const statusEl = document.getElementById('status');
+    
+    if (data.classification === 'DDoS') {
+        statusCard.className = 'stat-card bg-gradient-danger';
+        statusEl.textContent = 'ATTACK DETECTED';
+    } else {
+        statusCard.className = 'stat-card bg-gradient-success';
+        statusEl.textContent = 'NORMAL';
+    }
+}
+
+function updateChart(data) {
+    const now = new Date().toLocaleTimeString();
+    
+    chartData.x.push(now);
+    chartData.y.push(data.packet_rate);
+    
+    if (chartData.x.length > maxDataPoints) {
+        chartData.x.shift();
+        chartData.y.shift();
+    }
+    
+    Plotly.update('liveChart', {
+        x: [chartData.x],
+        y: [chartData.y]
+    });
+}
+
+function loadAlerts() {
+    fetch('/api/alerts')
+        .then(response => response.json())
+        .then(alerts => {
+            document.getElementById('alertCount').textContent = alerts.length;
+            
+            const tbody = document.getElementById('alertsBody');
+            tbody.innerHTML = alerts.slice(0, 10).map(alert => `
+                <tr>
+                    <td>${alert.timestamp}</td>
+                    <td><span class="badge bg-danger">${alert.type}</span></td>
+                    <td><span class="badge ${getSeverityClass(alert.severity)}">${alert.severity}</span></td>
+                    <td><code>${alert.source_ip}</code></td>
+                    <td>${alert.description}</td>
+                    <td><span class="badge ${alert.resolved ? 'bg-success' : 'bg-warning'}">${alert.resolved ? 'Resolved' : 'Active'}</span></td>
+                </tr>
+            `).join('');
+        });
+}
+
+function getSeverityClass(severity) {
+    switch(severity) {
+        case 'Critical': return 'bg-danger';
+        case 'High': return 'bg-warning text-dark';
+        case 'Medium': return 'bg-info';
+        default: return 'bg-secondary';
+    }
+}
+</script>
+{% endblock %}

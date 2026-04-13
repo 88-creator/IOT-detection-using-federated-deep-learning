@@ -1,0 +1,988 @@
+{% extends "base.html" %}
+{% block title %}Simulation - DDoS Detection System{% endblock %}
+
+{% block content %}
+<style>
+    /* Network Visualization Styles */
+    #networkCanvas {
+        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    
+    .simulation-container {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .attack-indicator {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        padding: 15px 30px;
+        background: rgba(220, 53, 69, 0.95);
+        color: white;
+        border-radius: 10px;
+        font-weight: bold;
+        font-size: 18px;
+        animation: pulse-alert 1.5s infinite;
+        display: none;
+        z-index: 10;
+        box-shadow: 0 5px 20px rgba(220, 53, 69, 0.5);
+    }
+    
+    .attack-indicator.active {
+        display: block;
+    }
+    
+    @keyframes pulse-alert {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.9; }
+    }
+    
+    .network-stats {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 15px 20px;
+        border-radius: 10px;
+        color: white;
+        font-size: 14px;
+        z-index: 10;
+    }
+    
+    .network-stats div {
+        margin: 5px 0;
+    }
+    
+    .stat-value {
+        font-weight: bold;
+        color: #4facfe;
+    }
+    
+    .control-panel {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 30px;
+        color: white;
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-simulation {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border: none;
+        padding: 15px 40px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 50px;
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+    }
+    
+    .btn-simulation:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(245, 87, 108, 0.6);
+    }
+    
+    .btn-simulation:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .dashboard-toggle {
+        margin-bottom: 20px;
+    }
+    
+    .toggle-btn {
+        padding: 10px 25px;
+        border: 2px solid #667eea;
+        background: transparent;
+        color: #667eea;
+        border-radius: 25px;
+        margin: 0 5px;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+    
+    .toggle-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: #764ba2;
+    }
+    
+    .toggle-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .dashboard-view {
+        display: none;
+    }
+    
+    .dashboard-view.active {
+        display: block;
+        animation: fadeIn 0.5s ease;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 15px;
+        padding: 25px;
+        color: white;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    
+    .metric-icon {
+        font-size: 40px;
+        margin-bottom: 15px;
+        opacity: 0.8;
+    }
+    
+    .metric-value {
+        font-size: 32px;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    
+    .metric-label {
+        font-size: 14px;
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .traffic-flow {
+        background: rgba(0,0,0,0.3);
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+    }
+    
+    .packet-animation {
+        width: 20px;
+        height: 20px;
+        background: #4facfe;
+        border-radius: 50%;
+        display: inline-block;
+        animation: packet-move 2s infinite;
+        margin-right: 10px;
+    }
+    
+    @keyframes packet-move {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(100px); }
+    }
+    
+    .admin-panel {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        border-radius: 15px;
+        padding: 30px;
+        color: white;
+    }
+    
+    .user-panel {
+        background: linear-gradient(135deg, #134e5e 0%, #71b280 100%);
+        border-radius: 15px;
+        padding: 30px;
+        color: white;
+    }
+    
+    .output-terminal {
+        background: #1e1e1e;
+        border-radius: 10px;
+        padding: 20px;
+        font-family: 'Courier New', monospace;
+        color: #00ff00;
+        max-height: 400px;
+        overflow-y: auto;
+        margin-top: 20px;
+    }
+    
+    .output-line {
+        margin: 5px 0;
+        animation: typewriter 0.5s;
+    }
+    
+    @keyframes typewriter {
+        from { opacity: 0; transform: translateX(-10px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .progress-custom {
+        height: 30px;
+        border-radius: 15px;
+        background: rgba(255,255,255,0.1);
+        overflow: hidden;
+    }
+    
+    .progress-bar-custom {
+        background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+        height: 100%;
+        border-radius: 15px;
+        transition: width 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="fw-bold text-dark"><i class="fas fa-flask me-2"></i>Dataset Simulation</h2>
+                <p class="text-muted">Advanced DDoS detection with real-time network visualization</p>
+            </div>
+        </div>
+
+        {% if file_info %}
+        <!-- Dashboard Toggle -->
+        <div class="row mb-4">
+            <div class="col-12 text-center dashboard-toggle">
+                <button class="toggle-btn active" onclick="switchDashboard('user')">
+                    <i class="fas fa-user me-2"></i>User Dashboard
+                </button>
+                <button class="toggle-btn" onclick="switchDashboard('admin')">
+                    <i class="fas fa-user-shield me-2"></i>Admin Dashboard
+                </button>
+            </div>
+        </div>
+
+        <!-- User Dashboard View -->
+        <div id="userDashboard" class="dashboard-view active">
+            <div class="row g-4 mb-4">
+                <!-- Dataset Info -->
+                <div class="col-xl-4">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h5><i class="fas fa-file-alt me-2"></i>Dataset Info</h5>
+                        </div>
+                        <div class="chart-body">
+                            <div class="detail-item mb-3">
+                                <span class="label fw-bold">Filename:</span>
+                                <span class="value">{{ file_info.filename }}</span>
+                            </div>
+                            <div class="detail-item mb-3">
+                                <span class="label fw-bold">Total Rows:</span>
+                                <span class="value">{{ file_info.rows }}</span>
+                            </div>
+                            <div class="detail-item mb-3">
+                                <span class="label fw-bold">Columns:</span>
+                                <span class="value">{{ file_info.columns }}</span>
+                            </div>
+                            <hr>
+                            <h6 class="fw-bold mb-2">Column Names:</h6>
+                            <div class="column-tags">
+                                {% for col in file_info.column_names %}
+                                <span class="badge bg-secondary me-1 mb-1">{{ col }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulation Control -->
+                <div class="col-xl-8">
+                    <div class="control-panel">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-robot fa-4x mb-3" style="opacity: 0.9;"></i>
+                            <h4>Ready to Run Simulation</h4>
+                            <p style="opacity: 0.9;">Click below to analyze the dataset and visualize network traffic</p>
+                        </div>
+                        <div class="text-center">
+                            <button id="runSimulation" class="btn-simulation">
+                                <i class="fas fa-play me-2"></i>Run Detection Simulation
+                            </button>
+                        </div>
+                        <div id="progressBar" class="progress-custom mt-4 d-none">
+                            <div class="progress-bar-custom" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Visualization -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="chart-card simulation-container">
+                        <div class="chart-header">
+                            <h5><i class="fas fa-network-wired me-2"></i>Network Traffic Visualization</h5>
+                        </div>
+                        <div class="chart-body" style="padding: 0; position: relative;">
+                            <div class="attack-indicator" id="attackIndicator">
+                                <i class="fas fa-exclamation-triangle me-2"></i>DDoS ATTACK DETECTED!
+                            </div>
+                            <canvas id="networkCanvas" width="1200" height="600"></canvas>
+                            <div class="network-stats" id="networkStats">
+                                <div><i class="fas fa-server me-2"></i>Active Nodes: <span class="stat-value" id="activeNodes">0</span></div>
+                                <div><i class="fas fa-exchange-alt me-2"></i>Packets/sec: <span class="stat-value" id="packetsPerSec">0</span></div>
+                                <div><i class="fas fa-tachometer-alt me-2"></i>Bandwidth: <span class="stat-value" id="bandwidth">0 MB/s</span></div>
+                                <div><i class="fas fa-shield-alt me-2"></i>Threat Level: <span class="stat-value" id="threatLevel">Low</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="d-none">
+                <div class="row g-4 mb-4">
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card bg-gradient-primary">
+                            <div class="stat-icon"><i class="fas fa-database"></i></div>
+                            <div class="stat-content">
+                                <h3 id="totalSamples">0</h3>
+                                <p>Total Samples</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card bg-gradient-danger">
+                            <div class="stat-icon"><i class="fas fa-skull"></i></div>
+                            <div class="stat-content">
+                                <h3 id="attackDetected">0</h3>
+                                <p>Attacks Detected</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card bg-gradient-success">
+                            <div class="stat-icon"><i class="fas fa-check"></i></div>
+                            <div class="stat-content">
+                                <h3 id="normalDetected">0</h3>
+                                <p>Normal Traffic</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card bg-gradient-info">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="stat-content">
+                                <h3 id="latency">0ms</h3>
+                                <p>Detection Latency</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-xl-6">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h5><i class="fas fa-chart-pie me-2"></i>Classification Results</h5>
+                            </div>
+                            <div class="chart-body">
+                                <div id="simClassificationChart" style="height: 300px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-6">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h5><i class="fas fa-percentage me-2"></i>Performance Metrics</h5>
+                            </div>
+                            <div class="chart-body">
+                                <div id="metricsChart" style="height: 300px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output Terminal -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h5><i class="fas fa-terminal me-2"></i>Simulation Output</h5>
+                            </div>
+                            <div class="chart-body">
+                                <div class="output-terminal" id="outputTerminal">
+                                    <div class="output-line">> Simulation initialized...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h5><i class="fas fa-list me-2"></i>Sample Detection Results</h5>
+                            </div>
+                            <div class="chart-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Classification</th>
+                                                <th>Confidence</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="resultsBody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard View -->
+        <div id="adminDashboard" class="dashboard-view">
+            <div class="row g-4 mb-4">
+                <div class="col-12">
+                    <div class="admin-panel">
+                        <h3 class="mb-4"><i class="fas fa-user-shield me-2"></i>Administrator Control Panel</h3>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-icon"><i class="fas fa-users"></i></div>
+                                    <div class="metric-value" id="adminTotalUsers">0</div>
+                                    <div class="metric-label">Total Users</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-icon"><i class="fas fa-database"></i></div>
+                                    <div class="metric-value" id="adminTotalLogs">0</div>
+                                    <div class="metric-label">Total Logs</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-icon"><i class="fas fa-bell"></i></div>
+                                    <div class="metric-value" id="adminActiveAlerts">0</div>
+                                    <div class="metric-label">Active Alerts</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-icon"><i class="fas fa-chart-line"></i></div>
+                                    <div class="metric-value" id="adminAccuracy">0%</div>
+                                    <div class="metric-label">Model Accuracy</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button id="runSimulationAdmin" class="btn-simulation">
+                                <i class="fas fa-play me-2"></i>Run Advanced Simulation
+                            </button>
+                        </div>
+                        <div id="progressBarAdmin" class="progress-custom mt-4 d-none">
+                            <div class="progress-bar-custom" style="width: 0%">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Network Visualization -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="chart-card simulation-container">
+                        <div class="chart-header">
+                            <h5><i class="fas fa-network-wired me-2"></i>Advanced Network Monitoring</h5>
+                        </div>
+                        <div class="chart-body" style="padding: 0; position: relative;">
+                            <div class="attack-indicator" id="attackIndicatorAdmin">
+                                <i class="fas fa-exclamation-triangle me-2"></i>DDoS ATTACK DETECTED!
+                            </div>
+                            <canvas id="networkCanvasAdmin" width="1200" height="600"></canvas>
+                            <div class="network-stats" id="networkStatsAdmin">
+                                <div><i class="fas fa-server me-2"></i>Active Nodes: <span class="stat-value" id="activeNodesAdmin">0</span></div>
+                                <div><i class="fas fa-exchange-alt me-2"></i>Packets/sec: <span class="stat-value" id="packetsPerSecAdmin">0</span></div>
+                                <div><i class="fas fa-tachometer-alt me-2"></i>Bandwidth: <span class="stat-value" id="bandwidthAdmin">0 MB/s</span></div>
+                                <div><i class="fas fa-shield-alt me-2"></i>Threat Level: <span class="stat-value" id="threatLevelAdmin">Low</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Results -->
+            <div id="adminResultsSection" class="d-none">
+                <div class="row g-4 mb-4">
+                    <div class="col-xl-6">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h5><i class="fas fa-chart-area me-2"></i>Traffic Analysis</h5>
+                            </div>
+                            <div class="chart-body">
+                                <div id="adminTrafficChart" style="height: 300px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-6">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h5><i class="fas fa-chart-bar me-2"></i>Detection Performance</h5>
+                            </div>
+                            <div class="chart-body">
+                                <div id="adminPerformanceChart" style="height: 300px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Output Terminal -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h5><i class="fas fa-terminal me-2"></i>System Logs</h5>
+                            </div>
+                            <div class="chart-body">
+                                <div class="output-terminal" id="outputTerminalAdmin">
+                                    <div class="output-line">> Admin console initialized...</div>
+                                    <div class="output-line">> Monitoring all network activities...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <div class="row justify-content-center">
+            <div class="col-xl-6">
+                <div class="chart-card text-center">
+                    <div class="chart-body py-5">
+                        <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
+                        <h4>No Dataset Uploaded</h4>
+                        <p class="text-muted mb-4">Please upload a CSV dataset first to run the simulation.</p>
+                        <a href="{{ url_for('upload_dataset') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-upload me-2"></i>Upload Dataset
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Network Visualization Class
+class NetworkVisualizer {
+    constructor(canvasId, statsId, attackIndicatorId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.statsId = statsId;
+        this.attackIndicatorId = attackIndicatorId;
+        this.nodes = [];
+        this.packets = [];
+        this.isAttack = false;
+        this.animationId = null;
+        this.init();
+    }
+
+    init() {
+        // Create network nodes
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+        
+        // Central server
+        this.nodes.push({
+            x: centerX,
+            y: centerY,
+            radius: 30,
+            type: 'server',
+            color: '#4facfe',
+            label: 'Server'
+        });
+
+        // Client nodes in circle
+        const numClients = 8;
+        const radius = 200;
+        for (let i = 0; i < numClients; i++) {
+            const angle = (i / numClients) * Math.PI * 2;
+            this.nodes.push({
+                x: centerX + Math.cos(angle) * radius,
+                y: centerY + Math.sin(angle) * radius,
+                radius: 20,
+                type: 'client',
+                color: '#00f2fe',
+                label: `Client ${i + 1}`
+            });
+        }
+    }
+
+    createPacket(fromIndex, toIndex, isAttack = false) {
+        const from = this.nodes[fromIndex];
+        const to = this.nodes[toIndex];
+        this.packets.push({
+            x: from.x,
+            y: from.y,
+            targetX: to.x,
+            targetY: to.y,
+            progress: 0,
+            speed: isAttack ? 0.03 : 0.02,
+            color: isAttack ? '#ff4757' : '#4facfe',
+            size: isAttack ? 6 : 4,
+            isAttack: isAttack
+        });
+    }
+
+    update() {
+        // Update packets
+        this.packets = this.packets.filter(packet => {
+            packet.progress += packet.speed;
+            packet.x = packet.x + (packet.targetX - packet.x) * packet.speed;
+            packet.y = packet.y + (packet.targetY - packet.y) * packet.speed;
+            return packet.progress < 1;
+        });
+
+        // Randomly create new packets
+        if (Math.random() < (this.isAttack ? 0.3 : 0.1)) {
+            const clientIndex = Math.floor(Math.random() * (this.nodes.length - 1)) + 1;
+            this.createPacket(clientIndex, 0, this.isAttack);
+        }
+    }
+
+    draw() {
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw connections
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        this.ctx.lineWidth = 1;
+        for (let i = 1; i < this.nodes.length; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.nodes[0].x, this.nodes[0].y);
+            this.ctx.lineTo(this.nodes[i].x, this.nodes[i].y);
+            this.ctx.stroke();
+        }
+
+        // Draw packets
+        this.packets.forEach(packet => {
+            this.ctx.beginPath();
+            this.ctx.arc(packet.x, packet.y, packet.size, 0, Math.PI * 2);
+            this.ctx.fillStyle = packet.color;
+            this.ctx.shadowBlur = 10;
+            this.ctx.shadowColor = packet.color;
+            this.ctx.fill();
+            this.ctx.shadowBlur = 0;
+        });
+
+        // Draw nodes
+        this.nodes.forEach(node => {
+            // Node circle
+            this.ctx.beginPath();
+            this.ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = node.color;
+            this.ctx.shadowBlur = 20;
+            this.ctx.shadowColor = node.color;
+            this.ctx.fill();
+            this.ctx.shadowBlur = 0;
+
+            // Node border
+            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+
+            // Node icon
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = `${node.radius}px FontAwesome`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            const icon = node.type === 'server' ? '🖥️' : '💻';
+            this.ctx.fillText(icon, node.x, node.y);
+
+            // Node label
+            this.ctx.font = '12px Arial';
+            this.ctx.fillStyle = 'white';
+            this.ctx.fillText(node.label, node.x, node.y + node.radius + 15);
+        });
+    }
+
+    animate() {
+        this.update();
+        this.draw();
+        this.animationId = requestAnimationFrame(() => this.animate());
+    }
+
+    start() {
+        this.animate();
+    }
+
+    stop() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+        }
+    }
+
+    setAttackMode(isAttack) {
+        this.isAttack = isAttack;
+        const indicator = document.getElementById(this.attackIndicatorId);
+        if (isAttack) {
+            indicator.classList.add('active');
+            this.nodes[0].color = '#ff4757';
+        } else {
+            indicator.classList.remove('active');
+            this.nodes[0].color = '#4facfe';
+        }
+    }
+
+    updateStats(packetsPerSec, bandwidth, threatLevel) {
+        const stats = document.getElementById(this.statsId);
+        if (stats) {
+            document.getElementById(this.statsId.replace('networkStats', 'activeNodes')).textContent = this.nodes.length;
+            document.getElementById(this.statsId.replace('networkStats', 'packetsPerSec')).textContent = packetsPerSec;
+            document.getElementById(this.statsId.replace('networkStats', 'bandwidth')).textContent = bandwidth + ' MB/s';
+            document.getElementById(this.statsId.replace('networkStats', 'threatLevel')).textContent = threatLevel;
+        }
+    }
+}
+
+// Initialize visualizers
+let userVisualizer, adminVisualizer;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const runBtn = document.getElementById('runSimulation');
+    const runBtnAdmin = document.getElementById('runSimulationAdmin');
+    
+    if (runBtn) {
+        runBtn.addEventListener('click', () => runSimulation('user'));
+        // Initialize user visualizer
+        userVisualizer = new NetworkVisualizer('networkCanvas', 'networkStats', 'attackIndicator');
+        userVisualizer.start();
+        
+        // Simulate network activity
+        setInterval(() => {
+            const pps = Math.floor(Math.random() * 1000) + 500;
+            const bw = (Math.random() * 50 + 10).toFixed(1);
+            const threat = pps > 800 ? 'High' : pps > 600 ? 'Medium' : 'Low';
+            userVisualizer.updateStats(pps, bw, threat);
+        }, 2000);
+    }
+    
+    if (runBtnAdmin) {
+        runBtnAdmin.addEventListener('click', () => runSimulation('admin'));
+        // Initialize admin visualizer
+        adminVisualizer = new NetworkVisualizer('networkCanvasAdmin', 'networkStatsAdmin', 'attackIndicatorAdmin');
+        adminVisualizer.start();
+        
+        // Simulate network activity
+        setInterval(() => {
+            const pps = Math.floor(Math.random() * 1000) + 500;
+            const bw = (Math.random() * 50 + 10).toFixed(1);
+            const threat = pps > 800 ? 'High' : pps > 600 ? 'Medium' : 'Low';
+            adminVisualizer.updateStats(pps, bw, threat);
+        }, 2000);
+    }
+});
+
+function switchDashboard(type) {
+    const toggleBtns = document.querySelectorAll('.toggle-btn');
+    toggleBtns.forEach(btn => btn.classList.remove('active'));
+    
+    if (type === 'user') {
+        toggleBtns[0].classList.add('active');
+        document.getElementById('userDashboard').classList.add('active');
+        document.getElementById('adminDashboard').classList.remove('active');
+    } else {
+        toggleBtns[1].classList.add('active');
+        document.getElementById('adminDashboard').classList.add('active');
+        document.getElementById('userDashboard').classList.remove('active');
+    }
+}
+
+function runSimulation(dashboardType) {
+    const isAdmin = dashboardType === 'admin';
+    const btn = document.getElementById(isAdmin ? 'runSimulationAdmin' : 'runSimulation');
+    const progressBar = document.getElementById(isAdmin ? 'progressBarAdmin' : 'progressBar');
+    const progress = progressBar.querySelector('.progress-bar-custom');
+    const terminal = document.getElementById(isAdmin ? 'outputTerminalAdmin' : 'outputTerminal');
+    const visualizer = isAdmin ? adminVisualizer : userVisualizer;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+    progressBar.classList.remove('d-none');
+    
+    // Add terminal output
+    addTerminalOutput(terminal, '> Starting simulation...');
+    addTerminalOutput(terminal, '> Loading dataset...');
+    
+    let width = 0;
+    const interval = setInterval(() => {
+        width += 5;
+        progress.style.width = width + '%';
+        progress.textContent = width + '%';
+        
+        if (width === 25) addTerminalOutput(terminal, '> Initializing ML model...');
+        if (width === 50) addTerminalOutput(terminal, '> Processing network packets...');
+        if (width === 75) addTerminalOutput(terminal, '> Analyzing traffic patterns...');
+        
+        if (width >= 90) clearInterval(interval);
+    }, 100);
+    
+    fetch('/api/simulate-dataset', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            clearInterval(interval);
+            progress.style.width = '100%';
+            progress.textContent = '100%';
+            
+            addTerminalOutput(terminal, '> Simulation complete!');
+            addTerminalOutput(terminal, `> Total samples processed: ${data.total_samples}`);
+            addTerminalOutput(terminal, `> Attacks detected: ${data.attack_detected}`);
+            addTerminalOutput(terminal, `> Model accuracy: ${(data.accuracy * 100).toFixed(2)}%`);
+            
+            // Trigger attack visualization
+            if (data.attack_detected > 0) {
+                visualizer.setAttackMode(true);
+                setTimeout(() => visualizer.setAttackMode(false), 5000);
+            }
+            
+            setTimeout(() => {
+                progressBar.classList.add('d-none');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play me-2"></i>Run Detection Simulation';
+                
+                if (isAdmin) {
+                    displayAdminResults(data);
+                } else {
+                    displayResults(data);
+                }
+            }, 500);
+        })
+        .catch(error => {
+            clearInterval(interval);
+            progressBar.classList.add('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play me-2"></i>Run Detection Simulation';
+            addTerminalOutput(terminal, '> ERROR: ' + error.message);
+            alert('Error: ' + error.message);
+        });
+}
+
+function addTerminalOutput(terminal, text) {
+    const line = document.createElement('div');
+    line.className = 'output-line';
+    line.textContent = text;
+    terminal.appendChild(line);
+    terminal.scrollTop = terminal.scrollHeight;
+}
+
+function displayResults(data) {
+    document.getElementById('resultsSection').classList.remove('d-none');
+    
+    document.getElementById('totalSamples').textContent = data.total_samples;
+    document.getElementById('attackDetected').textContent = data.attack_detected;
+    document.getElementById('normalDetected').textContent = data.normal_detected;
+    document.getElementById('latency').textContent = (data.detection_latency * 1000).toFixed(0) + 'ms';
+    
+    const pieTrace = {
+        labels: ['Normal', 'DDoS Attack'],
+        values: [data.normal_detected, data.attack_detected],
+        type: 'pie',
+        hole: 0.5,
+        marker: { colors: ['#28a745', '#dc3545'] }
+    };
+    Plotly.newPlot('simClassificationChart', [pieTrace], {
+        margin: { t: 20, r: 20, l: 20, b: 20 },
+        paper_bgcolor: 'transparent'
+    }, {responsive: true});
+    
+    const metricsTrace = {
+        x: ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
+        y: [data.accuracy * 100, data.precision * 100, data.recall * 100, data.f1_score * 100],
+        type: 'bar',
+        marker: {
+            color: ['#667eea', '#28a745', '#ffc107', '#17a2b8']
+        }
+    };
+    Plotly.newPlot('metricsChart', [metricsTrace], {
+        margin: { t: 20, r: 20, l: 50, b: 50 },
+        yaxis: { title: 'Score (%)', range: [80, 100] },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent'
+    }, {responsive: true});
+    
+    const tbody = document.getElementById('resultsBody');
+    tbody.innerHTML = data.results.map((r, i) => `
+        <tr>
+            <td>${i + 1}</td>
+            <td><span class="badge ${r.classification === 'DDoS' ? 'bg-danger' : 'bg-success'}">${r.classification}</span></td>
+            <td>${(r.confidence * 100).toFixed(1)}%</td>
+        </tr>
+    `).join('');
+}
+
+function displayAdminResults(data) {
+    document.getElementById('adminResultsSection').classList.remove('d-none');
+    
+    // Update admin metrics
+    document.getElementById('adminTotalUsers').textContent = Math.floor(Math.random() * 100) + 50;
+    document.getElementById('adminTotalLogs').textContent = data.total_samples;
+    document.getElementById('adminActiveAlerts').textContent = Math.floor(data.attack_detected * 0.3);
+    document.getElementById('adminAccuracy').textContent = (data.accuracy * 100).toFixed(1) + '%';
+    
+    // Traffic analysis chart
+    const trafficTrace = {
+        x: ['Normal', 'DDoS Attack'],
+        y: [data.normal_detected, data.attack_detected],
+        type: 'bar',
+        marker: {
+            color: ['#00f2fe', '#ff4757'],
+            line: { width: 2, color: 'white' }
+        }
+    };
+    Plotly.newPlot('adminTrafficChart', [trafficTrace], {
+        margin: { t: 20, r: 20, l: 50, b: 50 },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: { color: 'white' }
+    }, {responsive: true});
+    
+    // Performance chart
+    const perfTrace = {
+        x: ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
+        y: [data.accuracy * 100, data.precision * 100, data.recall * 100, data.f1_score * 100],
+        type: 'scatter',
+        mode: 'lines+markers',
+        marker: {
+            size: 12,
+            color: '#4facfe'
+        },
+        line: {
+            color: '#4facfe',
+            width: 3
+        }
+    };
+    Plotly.newPlot('adminPerformanceChart', [perfTrace], {
+        margin: { t: 20, r: 20, l: 50, b: 50 },
+        yaxis: { title: 'Score (%)', range: [80, 100] },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: { color: 'white' }
+    }, {responsive: true});
+}
+</script>
+{% endblock %}

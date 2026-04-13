@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}User Management - DDoS Detection System{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="fw-bold text-dark"><i class="fas fa-users me-2"></i>User Management</h2>
+                <p class="text-muted">View and manage system users</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-list me-2"></i>All Users</h5>
+                        <span class="badge bg-primary">{{ users|length }} Users</span>
+                    </div>
+                    <div class="chart-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Created</th>
+                                        <th>Last Login</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users %}
+                                    <tr>
+                                        <td>{{ user.id }}</td>
+                                        <td>
+                                            <i class="fas fa-user-circle text-primary me-2"></i>
+                                            {{ user.username }}
+                                        </td>
+                                        <td>{{ user.email }}</td>
+                                        <td>
+                                            <span class="badge {{ 'bg-danger' if user.is_admin else 'bg-primary' }}">
+                                                {{ 'Admin' if user.is_admin else 'User' }}
+                                            </span>
+                                        </td>
+                                        <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}System Reports - DDoS Detection System{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="fw-bold text-dark"><i class="fas fa-file-alt me-2"></i>System Reports</h2>
+                <p class="text-muted">Detection results and system performance reports</p>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-xl-6">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-brain me-2"></i>ML Model Performance</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Model</th>
+                                        <th>Accuracy</th>
+                                        <th>Precision</th>
+                                        <th>Recall</th>
+                                        <th>F1-Score</th>
+                                        <th>Latency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for result in detection_results %}
+                                    <tr>
+                                        <td><span class="badge bg-primary">{{ result.model_name }}</span></td>
+                                        <td>{{ "%.2f"|format(result.accuracy * 100) }}%</td>
+                                        <td>{{ "%.2f"|format(result.precision * 100) }}%</td>
+                                        <td>{{ "%.2f"|format(result.recall * 100) }}%</td>
+                                        <td>{{ "%.2f"|format(result.f1_score * 100) }}%</td>
+                                        <td>{{ "%.2f"|format(result.detection_latency) }}ms</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-6">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>Model Comparison</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="modelCompChart" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-xl-8">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-chart-line me-2"></i>System Performance Over Time</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="performanceChart" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-tachometer-alt me-2"></i>Network Throughput</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="throughputChart" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadModelComparison();
+    loadPerformanceChart();
+    loadThroughputChart();
+});
+
+function loadModelComparison() {
+    fetch('/api/model-comparison')
+        .then(response => response.json())
+        .then(data => {
+            const traces = [
+                { x: data.models, y: data.accuracy, name: 'Accuracy', type: 'bar' },
+                { x: data.models, y: data.precision, name: 'Precision', type: 'bar' },
+                { x: data.models, y: data.recall, name: 'Recall', type: 'bar' },
+                { x: data.models, y: data.f1_score, name: 'F1-Score', type: 'bar' }
+            ];
+            Plotly.newPlot('modelCompChart', traces, {
+                margin: { t: 20, r: 20, l: 50, b: 50 },
+                barmode: 'group',
+                yaxis: { title: 'Score (%)', range: [80, 100] },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent'
+            }, {responsive: true});
+        });
+}
+
+function loadPerformanceChart() {
+    fetch('/api/admin/system-metrics')
+        .then(response => response.json())
+        .then(data => {
+            const trace = {
+                x: data.timestamps,
+                y: data.packets_processed,
+                type: 'scatter',
+                mode: 'lines+markers',
+                fill: 'tozeroy',
+                line: { color: '#667eea' }
+            };
+            Plotly.newPlot('performanceChart', [trace], {
+                margin: { t: 20, r: 20, l: 60, b: 50 },
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Packets Processed' },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent'
+            }, {responsive: true});
+        });
+}
+
+function loadThroughputChart() {
+    fetch('/api/admin/system-metrics')
+        .then(response => response.json())
+        .then(data => {
+            const trace = {
+                x: data.timestamps,
+                y: data.network_throughput,
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#28a745', width: 2 }
+            };
+            Plotly.newPlot('throughputChart', [trace], {
+                margin: { t: 20, r: 20, l: 50, b: 50 },
+                xaxis: { title: 'Time' },
+                yaxis: { title: 'Mbps' },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent'
+            }, {responsive: true});
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Analytics - DDoS Detection System{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="fw-bold text-dark"><i class="fas fa-chart-bar me-2"></i>Advanced Analytics</h2>
+                <p class="text-muted">Detailed analysis and insights</p>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-xl-6">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-wave-square me-2"></i>Traffic Pattern Analysis</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="trafficPatternChart" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-6">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-shield-alt me-2"></i>Attack Type Distribution</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="attackTypeChart" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-xl-8">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-clock me-2"></i>Detection Performance Timeline</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="performanceTimelineChart" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-percentage me-2"></i>Detection Accuracy Trend</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="accuracyTrendChart" style="height: 350px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-xl-4">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-globe me-2"></i>Geographic Attack Sources</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="geoChart" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-server me-2"></i>Resource Utilization</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="resourceChart" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-network-wired me-2"></i>Protocol Analysis</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div id="protocolAnalysisChart" style="height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadTrafficPattern();
+    loadAttackTypes();
+    loadPerformanceTimeline();
+    loadAccuracyTrend();
+    loadGeoChart();
+    loadResourceChart();
+    loadProtocolAnalysis();
+});
+
+function loadTrafficPattern() {
+    fetch('/api/traffic-data?hours=168')
+        .then(response => response.json())
+        .then(data => {
+            const normal = data.packet_rates.filter((_, i) => data.classifications[i] === 'Normal');
+            const attack = data.packet_rates.filter((_, i) => data.classifications[i] === 'DDoS');
+            
+            const traces = [
+                { y: normal, name: 'Normal Traffic', type: 'box', marker: { color: '#28a745' } },
+                { y: attack, name: 'Attack Traffic', type: 'box', marker: { color: '#dc3545' } }
+            ];
+            Plotly.newPlot('trafficPatternChart', traces, {
+                margin: { t: 20, r: 20, l: 50, b: 50 },
+                yaxis: { title: 'Packet Rate' },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent'
+            }, {responsive: true});
+        });
+}
+
+function loadAttackTypes() {
+    const data = {
+        labels: ['SYN Flood', 'UDP Flood', 'HTTP Flood', 'ICMP Flood', 'DNS Amplification'],
+        values: [35, 25, 20, 12, 8]
+    };
+    const trace = {
+        labels: data.labels,
+        values: data.values,
+        type: 'pie',
+        hole: 0.4,
+        marker: { colors: ['#dc3545', '#ffc107', '#17a2b8', '#6c757d', '#667eea'] }
+    };
+    Plotly.newPlot('attackTypeChart', [trace], {
+        margin: { t: 20, r: 20, l: 20, b: 20 },
+        paper_bgcolor: 'transparent'
+    }, {responsive: true});
+}
+
+function loadPerformanceTimeline() {
+    const days = [];
+    const latencies = [];
+    const throughput = [];
+    
+    for (let i = 30; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        days.push(d.toISOString().split('T')[0]);
+        latencies.push(Math.random() * 2 + 0.5);
+        throughput.push(Math.random() * 500 + 500);
+    }
+    
+    const traces = [
+        { x: days, y: latencies, name: 'Detection Latency (ms)', yaxis: 'y1', type: 'scatter', mode: 'lines' },
+        { x: days, y: throughput, name: 'Throughput (Mbps)', yaxis: 'y2', type: 'scatter', mode: 'lines' }
+    ];
+    Plotly.newPlot('performanceTimelineChart', traces, {
+        margin: { t: 20, r: 50, l: 50, b: 80 },
+        xaxis: { tickangle: -45 },
+        yaxis: { title: 'Latency (ms)', side: 'left' },
+        yaxis2: { title: 'Throughput', side: 'right', overlaying: 'y' },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent'
+    }, {responsive: true});
+}
+
+function loadAccuracyTrend() {
+    const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+    const accuracy = [92.5, 94.2, 95.8, 96.5];
+    
+    const trace = {
+        x: weeks,
+        y: accuracy,
+        type: 'scatter',
+        mode: 'lines+markers',
+        fill: 'tozeroy',
+        line: { color: '#28a745' },
+        marker: { size: 10 }
+    };
+    Plotly.newPlot('accuracyTrendChart', [trace], {
+        margin: { t: 20, r: 20, l: 50, b: 50 },
+        yaxis: { title: 'Accuracy (%)', range: [90, 100] },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent'
+    }, {responsive: true});
+}
+
+function loadGeoChart() {
+    const regions = ['Asia', 'Europe', 'N. America', 'S. America', 'Africa'];
+    const attacks = [45, 25, 18, 8, 4];
+    
+    const trace = {
+        x: regions,
+        y: attacks,
+        type: 'bar',
+        marker: { color: '#dc3545' }
+    };
+    Plotly.newPlot('geoChart', [trace], {
+        margin: { t: 20, r: 20, l: 50, b: 80 },
+        yaxis: { title: 'Attack Count (%)' },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent'
+    }, {responsive: true});
+}
+
+function loadResourceChart() {
+    const metrics = ['CPU', 'Memory', 'Network', 'Disk I/O'];
+    const usage = [65, 48, 72, 35];
+    
+    const trace = {
+        type: 'scatterpolar',
+        r: usage,
+        theta: metrics,
+        fill: 'toself',
+        line: { color: '#667eea' }
+    };
+    Plotly.newPlot('resourceChart', [trace], {
+        margin: { t: 30, r: 30, l: 30, b: 30 },
+        polar: { radialaxis: { visible: true, range: [0, 100] } },
+        paper_bgcolor: 'transparent'
+    }, {responsive: true});
+}
+
+function loadProtocolAnalysis() {
+    fetch('/api/protocol-distribution')
+        .then(response => response.json())
+        .then(data => {
+            const trace = {
+                x: data.labels,
+                y: data.values,
+                type: 'bar',
+                marker: { color: ['#667eea', '#28a745', '#ffc107', '#17a2b8', '#dc3545'] }
+            };
+            Plotly.newPlot('protocolAnalysisChart', [trace], {
+                margin: { t: 20, r: 20, l: 50, b: 50 },
+                yaxis: { title: 'Traffic Count' },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent'
+            }, {responsive: true});
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Upload Dataset - DDoS Detection System{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="fw-bold text-dark"><i class="fas fa-upload me-2"></i>Upload Dataset</h2>
+                <p class="text-muted">Upload CSV dataset for DDoS detection simulation and analysis</p>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-xl-8">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-file-csv me-2"></i>Dataset Upload</h5>
+                    </div>
+                    <div class="chart-body">
+                        <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_dataset') }}">
+                            <div class="upload-area text-center p-5 mb-4" id="dropZone">
+                                <i class="fas fa-cloud-upload-alt fa-5x text-primary mb-4"></i>
+                                <h4>Drag & Drop your CSV file here</h4>
+                                <p class="text-muted mb-4">or click to browse</p>
+                                <input type="file" name="file" id="fileInput" class="d-none" accept=".csv">
+                                <button type="button" class="btn btn-primary btn-lg" onclick="document.getElementById('fileInput').click()">
+                                    <i class="fas fa-folder-open me-2"></i>Browse Files
+                                </button>
+                            </div>
+                            
+                            <div id="fileInfo" class="alert alert-info d-none">
+                                <i class="fas fa-file-alt me-2"></i>
+                                <span id="fileName"></span>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-success btn-lg px-5" id="uploadBtn" disabled>
+                                    <i class="fas fa-upload me-2"></i>Upload & Process
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="chart-card mt-4">
+                    <div class="chart-header">
+                        <h5><i class="fas fa-info-circle me-2"></i>Dataset Requirements</h5>
+                    </div>
+                    <div class="chart-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3">Supported Format</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-check text-success me-2"></i>CSV files only</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Maximum size: 50MB</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>UTF-8 encoding</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3">Recommended Datasets</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-database text-primary me-2"></i>CICDDoS2019</li>
+                                    <li><i class="fas fa-database text-primary me-2"></i>NSL-KDD</li>
+                                    <li><i class="fas fa-database text-primary me-2"></i>CICIDS2017</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            fileInput.files = files;
+            updateFileInfo(files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            updateFileInfo(e.target.files[0]);
+        }
+    });
+    
+    function updateFileInfo(file) {
+        fileName.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        fileInfo.classList.remove('d-none');
+        uploadBtn.disabled = false;
+    }
+});
+</script>
+{% endblock %}
